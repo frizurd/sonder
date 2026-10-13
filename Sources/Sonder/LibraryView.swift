@@ -89,9 +89,8 @@ struct Organizer: View {
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
-        .softTopEdge(height: Chrome.barHeight, color: .sidebarBackground)
-        // A flat column; the window buttons sit in its top strip.
-        .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: Chrome.barHeight) }
+        // A flat column; the window buttons sit in its top strip, over rows that blur as they scroll under.
+        .topBar(height: Chrome.barHeight, color: .sidebarBackground) { Color.clear.frame(height: Chrome.barHeight) }
         .background(Color.sidebarBackground)
     }
 
@@ -160,18 +159,18 @@ struct FileList: View {
             }
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
-            .softTopEdge(height: Chrome.barHeight + 40, color: .fileListBackground)
+            // Rows scroll under the header strip and the search field, blurring progressively.
+            .topBar(height: Chrome.barHeight + 40, color: .fileListBackground) {
+                VStack(spacing: 0) {
+                    // The header itself lives in the title bar (WindowHeader), on the window buttons' line.
+                    Color.clear.frame(height: Chrome.barHeight)
+                    searchField
+                }
+            }
             // Delete key on the selected note; ⌘D does the same from the menu.
             .onDeleteCommand { model.trashCurrentNote() }
             .onChange(of: model.fileURL) { _, url in
                 if let url { withAnimation { proxy.scrollTo(url) } }
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                // The header itself lives in the title bar (WindowHeader), on the window buttons' line.
-                Color.clear.frame(height: Chrome.barHeight)
-                searchField
             }
         }
         .background(Color.fileListBackground)

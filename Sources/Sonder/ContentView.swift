@@ -671,6 +671,19 @@ extension View {
         modifier(SoftTopEdge(height: height, color: color))
     }
 
+    /// A bar pinned over the top of a scrolling list. On macOS 26 the list keeps scrolling under it
+    /// with the system's progressive (soft) blur; before that, a fading material stands in.
+    @ViewBuilder
+    func topBar<Bar: View>(height: CGFloat, color: Color, @ViewBuilder _ bar: () -> Bar) -> some View {
+        if #available(macOS 26.0, *) {
+            safeAreaBar(edge: .top, spacing: 0, content: bar)
+                .scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            softTopEdge(height: height, color: color)
+                .safeAreaInset(edge: .top, spacing: 0, content: bar)
+        }
+    }
+
     @ViewBuilder
     func glassCircle() -> some View {
         if #available(macOS 26.0, *) {
