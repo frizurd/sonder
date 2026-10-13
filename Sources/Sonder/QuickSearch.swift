@@ -319,7 +319,8 @@ struct QuickSearch: View {
                             }
                             .padding(6)
                         }
-                        .frame(maxHeight: 360)
+                        // As tall as the results, up to a limit: a short list makes a short card.
+                        .frame(height: min(CGFloat(controller.results.count) * (Self.rowHeight + 2) + 12, 360))
                         .onChange(of: controller.selected) { _, index in
                             guard controller.results.indices.contains(index) else { return }
                             proxy.scrollTo(controller.results[index].id)
@@ -334,8 +335,9 @@ struct QuickSearch: View {
                 }
             }
             .frame(width: 560)
-            .glassPanel(cornerRadius: 22)
-            .shadow(color: .black.opacity(0.2), radius: 24, y: 8)
+            .glassPanel(cornerRadius: 18)
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.14), radius: 14, y: 6)
             .padding(.top, 4)
             Spacer(minLength: 0)
         }
@@ -369,10 +371,12 @@ struct QuickSearch: View {
             }
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .frame(height: Self.rowHeight)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(selected ? Color.accentColor : .clear))
         .contentShape(Rectangle())
     }
+
+    static let rowHeight: CGFloat = 44
 
     /// The name with the fuzzy-matched characters in bold.
     private func highlighted(_ name: String, _ positions: [Int], selected: Bool) -> Text {
