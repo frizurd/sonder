@@ -106,6 +106,9 @@ private struct WindowConfigurator: NSViewRepresentable {
                 let toolbar = NSToolbar(identifier: "Sonder.window")
                 toolbar.showsBaselineSeparator = false
                 toolbar.allowsUserCustomization = false
+                // Icons only, always; names show as tooltips. No Icon/Text menu on right-click.
+                toolbar.displayMode = .iconOnly
+                if #available(macOS 15.0, *) { toolbar.allowsDisplayModeCustomization = false }
                 window.toolbar = toolbar
             }
             window.toolbarStyle = .unified
