@@ -1,6 +1,6 @@
 # Sonder markdown editor
 
-*Sonder* (n.): the realization that each passerby has a life as vivid and complex as your own. (From *The Dictionary of Obscure Sorrows* by John Koenig.)
+*Sonder* (n.): the realization that each passerby has a life as vivid and complex as your own.
 
 A native macOS writing app (SwiftUI + TextKit): plain text, visible markdown syntax, and a Library of files on disk.
 
