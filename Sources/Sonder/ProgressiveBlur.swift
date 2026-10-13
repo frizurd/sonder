@@ -17,12 +17,18 @@ struct ProgressiveBlur: View {
         }
     }
 
-    /// An ease-out curve from full at the top to clear at the bottom, shared by the blur and the tint.
+    /// How strong the effect is at `t` (0 at the top, 1 at the bottom): it falls away quickly
+    /// below the top and then trails off gently, so there is no visible edge where it ends.
+    static func strength(at t: Double) -> Double {
+        let remaining = 1 - min(max(t, 0), 1)
+        return remaining * remaining
+    }
+
+    /// The same curve as gradient stops, for the tint over the blur.
     static func fadeStops(from color: Color, maxOpacity: Double = 1) -> [Gradient.Stop] {
-        (0...8).map { i in
-            let t = Double(i) / 8
-            let eased = 1 - t * t * (3 - 2 * t)
-            return .init(color: color.opacity(maxOpacity * eased), location: t)
+        (0...12).map { i in
+            let t = Double(i) / 12
+            return .init(color: color.opacity(maxOpacity * strength(at: t)), location: t)
         }
     }
 }
@@ -40,7 +46,7 @@ final class VariableBlurView: NSVisualEffectView {
         filterClass?.responds(to: NSSelectorFromString("filterWithType:")) == true
     }
 
-    private let radius: CGFloat = 18
+    private let radius: CGFloat = 10
     private var maskHeight = 0
 
     override init(frame: NSRect) {
@@ -103,8 +109,7 @@ final class VariableBlurView: NSVisualEffectView {
         for row in 0..<height {
             // Core Graphics counts rows from the bottom, so the last row is the top of the view.
             let t = Double(height - 1 - row) / Double(height - 1)
-            let eased = 1 - t * t * (3 - 2 * t)
-            context.setFillColor(gray: 0, alpha: eased)
+            context.setFillColor(gray: 0, alpha: ProgressiveBlur.strength(at: t))
             context.fill(CGRect(x: 0, y: row, width: 1, height: 1))
         }
         return context.makeImage()

@@ -227,10 +227,10 @@ struct EditorArea: View {
         .overlay(alignment: .top) {
             ZStack {
                 ProgressiveBlur()
-                LinearGradient(stops: ProgressiveBlur.fadeStops(from: .editorBackground, maxOpacity: 0.55),
+                LinearGradient(stops: ProgressiveBlur.fadeStops(from: .editorBackground, maxOpacity: 0.35),
                                startPoint: .top, endPoint: .bottom)
             }
-            .frame(height: Chrome.barHeight + 20)
+            .frame(height: Chrome.barHeight + 8)
             .ignoresSafeArea()
             .allowsHitTesting(false)
         }
