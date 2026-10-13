@@ -376,9 +376,6 @@ struct FileListHeader: View {
         HStack(spacing: 10) {
             // With the sidebar hidden, this header starts under the window buttons.
             if !model.showSidebar { Spacer().frame(width: Chrome.windowButtonsWidth - 14) }
-            GlassIconButton(symbol: "sidebar.squares.left", help: "Show or hide the sidebar (⌥⌘S)") {
-                model.showSidebar.toggle()
-            }
             if let parent = parentFolder {
                 GlassIconButton(symbol: "chevron.left", help: "Go to \(parent.lastPathComponent)") {
                     model.selection = .folder(parent)
