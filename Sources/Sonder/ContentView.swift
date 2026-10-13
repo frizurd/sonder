@@ -58,6 +58,18 @@ struct ContentView: View {
         .animation(.smooth(duration: 0.28), value: model.showAI)
         .background(Color.editorBackground)
         .ignoresSafeArea()
+        .overlay(alignment: .top) {
+            if let controller = model.quickOpen {
+                // The whole window dims behind Open Quickly; clicking the dimmed part closes it.
+                ZStack(alignment: .top) {
+                    QuickOpenScrim { QuickOpen.hide(for: model) }
+                    QuickSearch(controller: controller)
+                        .padding(.top, 86)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.14), value: model.quickOpen != nil)
         .frame(minWidth: 640, minHeight: 400)
         .background(WindowConfigurator(model: model))
         .focusedSceneObject(model)
@@ -297,6 +309,14 @@ struct WindowHeader: View {
         }
         .frame(height: Chrome.barHeight)
         .background(WindowDragArea())
+        // The header row dims with the rest of the window while Open Quickly is up.
+        .overlay {
+            if model.quickOpen != nil {
+                QuickOpenScrim { QuickOpen.hide(for: model) }
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.14), value: model.quickOpen != nil)
         .animation(.smooth(duration: 0.28), value: model.showLibrary)
         .animation(.smooth(duration: 0.28), value: model.showSidebar)
         .animation(.smooth(duration: 0.28), value: model.showAI)
@@ -350,6 +370,18 @@ struct EditorColumn: View {
             .onContinuousHover { phase in
                 if case .active = phase, status.isTyping { status.isTyping = false }
             }
+    }
+}
+
+/// The dimmed layer behind Open Quickly.
+struct QuickOpenScrim: View {
+    let dismiss: () -> Void
+
+    var body: some View {
+        Color.black.opacity(0.32)
+            .ignoresSafeArea()
+            .contentShape(Rectangle())
+            .onTapGesture(perform: dismiss)
     }
 }
 

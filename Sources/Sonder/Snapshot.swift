@@ -215,12 +215,13 @@ enum Snapshot {
             // Keys go to whichever window has the keyboard, as they would for real.
             func press(_ chars: String, keyCode: UInt16) {
                 // The test app is never active, so nothing is key; send to the open panel directly.
-                let target = NSApp.windows.first { $0 is QuickOpenPanel && $0.isVisible } ?? NSApp.keyWindow ?? window
+                let target = window
                 for type in [NSEvent.EventType.keyDown, .keyUp] {
                     let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: [], timestamp: 0,
                                                  windowNumber: target.windowNumber, context: nil, characters: chars,
                                                  charactersIgnoringModifiers: chars, isARepeat: false, keyCode: keyCode)!
-                    target.sendEvent(event)
+                    NSApp.sendEvent(event)
+                    _ = target
                 }
                 pump(0.05)
             }
@@ -233,8 +234,7 @@ enum Snapshot {
             model.selection = .recents
             model.showQuickSearch = true
             pump(0.6)
-            let panel = NSApp.windows.first { $0 is QuickOpenPanel && $0.isVisible }
-            print("palette panel shown: \(panel != nil), child of the window: \(panel?.parent === window)")
+            print("palette shown in the window: \(model.quickOpen != nil), field focused: \(window.firstResponder is NSText && !(window.firstResponder is MarkdownTextView))")
             type("e")
             pump(0.6)
             press(String(UnicodeScalar(NSDownArrowFunctionKey)!), keyCode: 125)
@@ -261,7 +261,7 @@ enum Snapshot {
         // ⌘P through the real event path (NSApp.sendEvent, so the app's key monitor runs).
         if let model = WindowRegistry.shared.activeModel {
             func send(_ chars: String, keyCode: UInt16, command: Bool) {
-                let target = NSApp.windows.first { $0 is QuickOpenPanel && $0.isVisible } ?? window
+                let target = window
                 for type in [NSEvent.EventType.keyDown, .keyUp] {
                     let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: command ? [.command] : [],
                                                  timestamp: 0, windowNumber: target.windowNumber, context: nil,
@@ -270,7 +270,7 @@ enum Snapshot {
                 }
                 pump(0.3)
             }
-            let visible = { NSApp.windows.contains { $0 is QuickOpenPanel && $0.isVisible } }
+            let visible = { model.quickOpen != nil }
             send("p", keyCode: 35, command: true)
             print("⌘P opens: \(visible())")
             send("p", keyCode: 35, command: true)
@@ -279,11 +279,10 @@ enum Snapshot {
             print("Esc closes: \(!visible()) flag reset: \(!model.showQuickSearch)")
             send("p", keyCode: 35, command: true)
             print("⌘P after closing opens again: \(visible())")
-            // A panel that vanished without closing properly leaves the flag on; ⌘P must still work.
-            NSApp.windows.first { $0 is QuickOpenPanel }?.orderOut(nil)
-            pump(0.2)
-            send("p", keyCode: 35, command: true)
-            print("⌘P after the panel vanished (flag stuck \(model.showQuickSearch)): \(visible())")
+            // Focus wandered off (e.g. into the editor) while it's open: typing still lands in the search.
+            window.makeFirstResponder(model.editor?.textView)
+            send("x", keyCode: 7, command: false)
+            print("typing after focus wandered goes to the search: \(model.quickOpen?.query == "x") (note unchanged: \(model.editor?.textView?.string.contains("x\n") == false))")
             send("\u{1b}", keyCode: 53, command: false)
             window.makeFirstResponder(nil)
             send("p", keyCode: 35, command: true)

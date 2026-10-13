@@ -134,153 +134,77 @@ final class QuickOpenController: ObservableObject {
     }
 }
 
-// MARK: - Panel
+// MARK: - Presenting
 
-/// The floating key window Open Quickly lives in. Navigation keys are handled here, before the
-/// search field sees them.
-final class QuickOpenPanel: NSPanel {
-    private let controller: QuickOpenController
-    fileprivate(set) weak var parentModel: WindowModel?
-
-    private init(controller: QuickOpenController, model: WindowModel) {
-        self.controller = controller
-        parentModel = model
-        super.init(contentRect: NSRect(x: 0, y: 0, width: 580, height: 440),
-                   styleMask: [.borderless, .fullSizeContentView], backing: .buffered, defer: false)
-        // A child window of the writing window: above it, but never above other apps.
-        isFloatingPanel = false
-        level = .normal
-        backgroundColor = .clear
-        isOpaque = false
-        hasShadow = false
-        isReleasedWhenClosed = false
-        hidesOnDeactivate = false
-        animationBehavior = .utilityWindow
-        let host = NSHostingView(rootView: QuickSearch(controller: controller))
-        host.sceneBridgingOptions = []
-        contentView = host
-    }
-
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
-
-    override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown, handle(event) { return }
-        super.sendEvent(event)
-    }
-
-    private func handle(_ event: NSEvent) -> Bool {
-        let control = event.modifierFlags.contains(.control)
-        let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
-        switch event.keyCode {
-        case 125: controller.move(1); return true                                   // ↓
-        case 126: controller.move(-1); return true                                  // ↑
-        case 36, 76: controller.openSelected(newWindow: event.modifierFlags.contains(.shift)); return true  // Return
-        case 53: dismiss(); return true                                             // Esc
-        default: break
-        }
-        if control && (key == "n" || key == "j") { controller.move(1); return true }
-        if control && (key == "p" || key == "k") { controller.move(-1); return true }
-        return false
-    }
-
-    /// Closes on a click anywhere outside the panel. (Not on losing key status: right after a menu
-    /// shortcut AppKit can hand key status back to the main window for a moment.)
-    private var clickMonitor: Any?
-    /// Switching to another app closes it.
-    private var resignObserver: NSObjectProtocol?
-
-    private func watchOutsideClicks() {
-        clickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            guard let self, self.isVisible else { return event }
-            if event.window !== self { self.dismiss(restoreFocus: false) }
-            return event
-        }
-    }
-
-    static let tracing = CommandLine.arguments.contains("--trace-open-quickly")
-
-    func dismiss(restoreFocus: Bool = true) {
-        if Self.tracing { print("dismiss visible=\(isVisible) from:", Thread.callStackSymbols.dropFirst(1).prefix(4).joined(separator: " | ")); fflush(stdout) }
-        guard isVisible else { return }
-        if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
-        clickMonitor = nil
-        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
-        resignObserver = nil
-        parent?.removeChildWindow(self)
-        orderOut(nil)
-        parentModel?.showQuickSearch = false
-        Self.current = nil
-        if restoreFocus, let model = parentModel, let window = WindowRegistry.shared.window(for: model) {
-            window.makeKeyAndOrderFront(nil)
-            if let textView = model.editor?.textView { window.makeFirstResponder(textView) }
-        }
-    }
-
-    private static var current: QuickOpenPanel?
-
-    /// Shows Open Quickly for `model`'s window (the front window if nil), taking the keyboard.
-    /// Calling it while it's open just puts the cursor back in the search field. Returns false if
-    /// there is no window to show it on.
+/// Opens and closes Open Quickly as an overlay inside the writing window: the window dims behind a
+/// glass card. The app-wide key monitor (KeyCommands) sends it ⌘P and the navigation keys, so it
+/// works whatever has focus.
+enum QuickOpen {
+    /// Shows Open Quickly in `model`'s window (the front window if nil). While it's open, this puts the
+    /// cursor back in its search field. Returns false if there's no window.
     @discardableResult
     static func present(for model: WindowModel? = nil) -> Bool {
         guard let model = model ?? WindowRegistry.shared.activeModel else { return false }
-        if let current, current.isVisible, current.parentModel === model {
-            current.focusField()
-            return true
+        if model.quickOpen == nil {
+            let controller = QuickOpenController(model: model)
+            controller.close = { [weak model] in model.map { hide(for: $0) } }
+            model.quickOpen = controller
         }
-        let window = WindowRegistry.shared.window(for: model)
-            ?? NSApp.mainWindow.flatMap { $0 is NSPanel ? nil : $0 }
-            ?? NSApp.windows.first { $0.isVisible && !($0 is NSPanel) && $0.canBecomeMain }
-        guard let window else { return false }
-        if tracing { print("present"); fflush(stdout) }
-        current?.dismiss(restoreFocus: false)
-        let controller = QuickOpenController(model: model)
-        let panel = QuickOpenPanel(controller: controller, model: model)
-        controller.close = { [weak panel] in panel?.dismiss(restoreFocus: false) }
-        let frame = window.frame
-        panel.setFrameOrigin(NSPoint(x: frame.midX - panel.frame.width / 2, y: frame.maxY - 90 - panel.frame.height))
-        window.addChildWindow(panel, ordered: .above)
-        current = panel
-        panel.makeKeyAndOrderFront(nil)
-        panel.watchOutsideClicks()
-        panel.resignObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak panel] _ in
-            panel?.dismiss(restoreFocus: false)
-        }
-        if !model.showQuickSearch { model.showQuickSearch = true }
-        // If a menu or key event is still being handled, take the keyboard again once it has finished.
-        DispatchQueue.main.async { [weak panel] in
-            guard let panel, panel.isVisible else { return }
+        if let window = WindowRegistry.shared.window(for: model) {
+            window.makeKeyAndOrderFront(nil)
             NSApp.activate()
-            panel.makeKeyAndOrderFront(nil)
-            panel.focusField()
         }
+        // The overlay appears on the next layout pass; then give its field the keyboard.
+        DispatchQueue.main.async { focusField(of: model) }
         return true
     }
 
     static func hide(for model: WindowModel? = nil) {
-        guard let current, model == nil || current.parentModel === model else { return }
-        current.dismiss()
+        guard let model = model ?? WindowRegistry.shared.activeModel, model.quickOpen != nil else { return }
+        model.quickOpen = nil
+        // Back to writing.
+        if let window = WindowRegistry.shared.window(for: model), let textView = model.editor?.textView {
+            window.makeFirstResponder(textView)
+        }
     }
 
-    /// Puts the keyboard in the search field.
-    func focusField() {
-        makeKeyAndOrderFront(nil)
+    static func focusField(of model: WindowModel) {
+        guard model.quickOpen != nil, let window = WindowRegistry.shared.window(for: model), let content = window.contentView else { return }
         func field(in view: NSView) -> NSTextField? {
-            if let field = view as? NSTextField, field.isEditable { return field }
+            if let field = view as? NSTextField, field.isEditable, field.placeholderString == QuickSearch.placeholder { return field }
             for subview in view.subviews { if let found = field(in: subview) { return found } }
             return nil
         }
-        if let contentView, let field = field(in: contentView), !(firstResponder is NSText) {
-            makeFirstResponder(field)
+        if let field = field(in: content), !(window.firstResponder is NSText && (window.firstResponder as? NSText)?.delegate === field) {
+            window.makeFirstResponder(field)
         }
+    }
+
+    /// Navigation while it's open. Returns true if the key was used.
+    static func handle(_ event: NSEvent) -> Bool {
+        guard let model = WindowRegistry.shared.activeModel, let controller = model.quickOpen else { return false }
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let control = modifiers.contains(.control)
+        let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
+        switch event.keyCode {
+        case 125: controller.move(1); return true                                   // ↓
+        case 126: controller.move(-1); return true                                  // ↑
+        case 36, 76: controller.openSelected(newWindow: modifiers.contains(.shift)); return true  // Return
+        case 53: hide(for: model); return true                                      // Esc
+        default: break
+        }
+        if control && (key == "n" || key == "j") { controller.move(1); return true }
+        if control && (key == "p" || key == "k") { controller.move(-1); return true }
+        // Anything typed goes to the search field, wherever focus had wandered.
+        if !modifiers.contains(.command) { focusField(of: model) }
+        return false
     }
 }
 
 // MARK: - View
 
 struct QuickSearch: View {
+    static let placeholder = "Open note or folder…"
     @ObservedObject var controller: QuickOpenController
     @FocusState private var focused: Bool
 
@@ -291,7 +215,7 @@ struct QuickSearch: View {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(.secondary)
-                    TextField("Open note or folder…", text: $controller.query)
+                    TextField(Self.placeholder, text: $controller.query)
                         .textFieldStyle(.plain)
                         .font(.system(size: 18))
                         .focused($focused)
@@ -337,14 +261,10 @@ struct QuickSearch: View {
             .frame(width: 560)
             .glassPanel(cornerRadius: 18)
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.14), radius: 14, y: 6)
-            .padding(.top, 4)
-            Spacer(minLength: 0)
+            .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
         }
-        .frame(width: 580, height: 440, alignment: .top)
         .onAppear {
-            // The panel is key by now; give the field the keyboard.
-            DispatchQueue.main.async { focused = true }
+            focused = true
         }
     }
 

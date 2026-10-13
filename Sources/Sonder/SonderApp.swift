@@ -50,8 +50,9 @@ enum KeyCommands {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.capsLock, .numericPad, .function])
+            if QuickOpen.handle(event) { return nil }
             guard modifiers == .command, event.charactersIgnoringModifiers?.lowercased() == "p" else { return event }
-            if !QuickOpenPanel.present() { NSSound.beep() }
+            if !QuickOpen.present() { NSSound.beep() }
             return nil
         }
     }
@@ -86,8 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let model = WindowRegistry.shared.activeModel else { return print("no window") }
                 model.showQuickSearch = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    let panel = NSApp.windows.first { $0 is QuickOpenPanel && $0.isVisible }
-                    print("open quickly: visible=\(panel != nil) key=\(panel?.isKeyWindow == true) appActive=\(NSApp.isActive) fieldFocused=\(panel?.firstResponder is NSText) flag=\(model.showQuickSearch)")
+                    print("open quickly: open=\(model.showQuickSearch) fieldFocused=\(NSApp.mainWindow?.firstResponder is NSText && !(NSApp.mainWindow?.firstResponder is MarkdownTextView))")
                     fflush(stdout)
                 }
             }
@@ -139,9 +139,9 @@ struct AppCommands: Commands {
             Divider()
             Button("Open…") { model?.openWithPanel() }
                 .keyboardShortcut("o")
-            Button("Open Quickly…") { QuickOpenPanel.present(for: model) }
+            Button("Open Quickly…") { QuickOpen.present(for: model) }
                 .keyboardShortcut("p")
-            Button("Search Notes…") { QuickOpenPanel.present(for: model) }
+            Button("Search Notes…") { QuickOpen.present(for: model) }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
         }
         CommandGroup(replacing: .saveItem) {
