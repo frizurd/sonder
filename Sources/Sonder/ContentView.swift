@@ -222,8 +222,18 @@ struct EditorArea: View {
         }
         // Both panes run under the header (which lives in the title bar); their own insets keep text clear.
         .ignoresSafeArea()
-        // Text scrolling up under the header blurs and fades out, as in the other columns.
-        .softTopEdge(height: Chrome.barHeight, color: .editorBackground)
+        // Text scrolling up under the header blurs out progressively, all the way to the window's
+        // top edge and behind the header's controls, like the notes list under its bar.
+        .overlay(alignment: .top) {
+            ZStack {
+                ProgressiveBlur()
+                LinearGradient(stops: ProgressiveBlur.fadeStops(from: .editorBackground, maxOpacity: 0.55),
+                               startPoint: .top, endPoint: .bottom)
+            }
+            .frame(height: Chrome.barHeight + 20)
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+        }
     }
 }
 

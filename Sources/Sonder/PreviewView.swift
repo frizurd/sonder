@@ -2,6 +2,20 @@ import Combine
 import SwiftUI
 import WebKit
 
+/// The Preview's web view. It runs under the header without telling WebKit about it: WebKit would
+/// otherwise give the page the system's hard top edge (a band with a line), and the editor area's
+/// progressive blur covers that strip instead.
+final class PreviewPage: WKWebView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard #available(macOS 26.0, *), window != nil else { return }
+        // Until it is set, WebKit derives the inset from the title bar. An explicit value replaces
+        // that; WebKit ignores a "change" to the zero it starts with, hence the nudge first.
+        obscuredContentInsets = NSEdgeInsets(top: 1, left: 0, bottom: 0, right: 0)
+        obscuredContentInsets = NSEdgeInsets()
+    }
+}
+
 struct PreviewWebView: NSViewRepresentable {
     let model: WindowModel
     @ObservedObject var prefs: Preferences
@@ -16,7 +30,7 @@ struct PreviewWebView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(model: model) }
 
     func makeNSView(context: Context) -> WKWebView {
-        let webView = WKWebView(frame: .zero, configuration: PreviewWebView.configuration())
+        let webView = PreviewPage(frame: .zero, configuration: PreviewWebView.configuration())
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
         // The page runs under the header. Declaring the header as obscured would give the page the
@@ -55,8 +69,7 @@ struct PreviewWebView: NSViewRepresentable {
             self.model = model
             super.init()
             scrollSubscription = model.status.scroll
-                .throttle(for: .milliseconds(16), scheduler: RunLoop.main, latest: true)
-                .sink { [weak self] in self?.scroll(to: $0) }
+                .sink { [weak self] in self?.follow($0) }
         }
 
         deinit {
@@ -113,9 +126,8 @@ struct PreviewWebView: NSViewRepresentable {
 
         /// The page goes through a temporary file so local images can load.
         private func load(_ html: String, base: URL?, in webView: WKWebView) {
-            // On macOS 26 WebKit keeps the page's top clear of the title bar; before that the page does.
-            var classes = "preview "
-            if #unavailable(macOS 26.0) { classes += "preview-header " }
+            // The page itself leaves room for the header it scrolls under.
+            let classes = "preview preview-header "
             var page = html.replacingOccurrences(of: "<body class=\"", with: "<body class=\"" + classes)
             if let base {
                 page = page.replacingOccurrences(of: "<head>", with: "<head>\n<base href=\"\(base.absoluteString)\">")
@@ -131,11 +143,52 @@ struct PreviewWebView: NSViewRepresentable {
             webView.loadFileURL(file, allowingReadAccessTo: URL(fileURLWithPath: "/"))
         }
 
+        // MARK: Following the editor's scrolling
+        //
+        // The editor reports every scroll step. The Preview applies the newest one once per display
+        // frame (in step with the screen's refresh rate, 120 Hz on ProMotion), and never queues a
+        // second scroll while the page is still applying one, so it keeps pace with the editor.
+
+        private var pendingFraction: CGFloat?
+        private var scrollInFlight = false
+        private var displayLink: CADisplayLink?
+        private var idleFrames = 0
+
+        private func follow(_ fraction: CGFloat) {
+            pendingFraction = fraction
+            guard displayLink == nil else { return }
+            guard let webView, webView.window != nil else {
+                // Not on screen yet: just remember the position for when the page loads.
+                pendingFraction = nil
+                scroll(to: fraction)
+                return
+            }
+            let link = webView.displayLink(target: self, selector: #selector(frame))
+            link.add(to: .main, forMode: .common)
+            displayLink = link
+        }
+
+        @objc private func frame(_ link: CADisplayLink) {
+            guard !scrollInFlight else { return }
+            guard let fraction = pendingFraction else {
+                // Stop after a short idle spell; the next scroll starts it again.
+                idleFrames += 1
+                if idleFrames > 30 { link.invalidate(); displayLink = nil; idleFrames = 0 }
+                return
+            }
+            idleFrames = 0
+            pendingFraction = nil
+            scroll(to: fraction)
+        }
+
         func scroll(to fraction: CGFloat) {
-            guard abs(fraction - lastFraction) > 0.001 else { return }
+            guard fraction != lastFraction else { return }
             lastFraction = fraction
-            guard isLoaded else { return }
-            webView?.evaluateJavaScript("window.scrollTo(0, \(fraction) * (document.documentElement.scrollHeight - window.innerHeight));")
+            guard isLoaded, let webView else { return }
+            scrollInFlight = true
+            webView.evaluateJavaScript("window.scrollTo(0, \(fraction) * (document.documentElement.scrollHeight - window.innerHeight));") { [weak self] _, _ in
+                self?.scrollInFlight = false
+            }
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

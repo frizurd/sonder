@@ -446,7 +446,8 @@ struct MarkdownEditor: NSViewRepresentable {
             let insets = scrollView.contentInsets
             let range = max(1, textView.frame.height - visible.height + insets.top + insets.bottom)
             let fraction = min(1, max(0, (visible.minY + insets.top) / range))
-            if abs(fraction - model.status.scroll.value) > 0.002 { model.status.scroll.send(fraction) }
+            // Every change goes out: the Preview follows pixel for pixel, not in steps.
+            if fraction != model.status.scroll.value { model.status.scroll.send(fraction) }
             if prefs.syntaxHighlight || prefs.styleCheck || prefs.showAuthors || prefs.focusMode {
                 refreshOverlaysAfterScroll()
             }
