@@ -97,16 +97,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 fflush(stdout)
             }
         }
-        // Development aid: `--debug-open-quickly` opens the palette shortly after launch and logs its state.
+        // Development aid: `--debug-open-quickly` opens and closes the palette many times, from different
+        // starting points, and logs how often its field didn't get the keyboard.
         if CommandLine.arguments.contains("--debug-open-quickly") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                guard let model = WindowRegistry.shared.activeModel else { return print("no window") }
-                model.showQuickSearch = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    print("open quickly: open=\(model.showQuickSearch) fieldFocused=\(NSApp.mainWindow?.firstResponder is NSText && !(NSApp.mainWindow?.firstResponder is MarkdownTextView))")
-                    fflush(stdout)
-                }
-            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { QuickOpen.stressTest() }
         }
     }
 

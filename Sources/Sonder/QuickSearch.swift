@@ -154,8 +154,13 @@ enum QuickOpen {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate()
         }
-        // The overlay appears on the next layout pass; then give its field the keyboard.
-        DispatchQueue.main.async { focusField(of: model) }
+        // The overlay appears on a later pass, sometimes a few frames on when the window is busy;
+        // keep trying until its field has the keyboard.
+        func focusSoon(_ attempt: Int) {
+            guard model.quickOpen != nil, !focusField(of: model), attempt < 60 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.016) { focusSoon(attempt + 1) }
+        }
+        DispatchQueue.main.async { focusSoon(0) }
         return true
     }
 
@@ -168,16 +173,22 @@ enum QuickOpen {
         }
     }
 
-    static func focusField(of model: WindowModel) {
-        guard model.quickOpen != nil, let window = WindowRegistry.shared.window(for: model), let content = window.contentView else { return }
+    /// Gives the search field the keyboard, with the cursor after what's typed so far. Returns false
+    /// while the field isn't on screen yet.
+    @discardableResult
+    static func focusField(of model: WindowModel) -> Bool {
+        guard model.quickOpen != nil, let window = WindowRegistry.shared.window(for: model), let content = window.contentView else { return false }
         func field(in view: NSView) -> NSTextField? {
             if let field = view as? NSTextField, field.isEditable, field.placeholderString == QuickSearch.placeholder { return field }
             for subview in view.subviews { if let found = field(in: subview) { return found } }
             return nil
         }
-        if let field = field(in: content), !(window.firstResponder is NSText && (window.firstResponder as? NSText)?.delegate === field) {
-            window.makeFirstResponder(field)
-        }
+        guard let field = field(in: content) else { return false }
+        if let editor = field.currentEditor(), window.firstResponder === editor { return true }
+        guard window.makeFirstResponder(field), let editor = field.currentEditor() else { return false }
+        // Taking focus selects the whole field; the next letter would replace what's there.
+        editor.selectedRange = NSRange(location: (editor.string as NSString).length, length: 0)
+        return true
     }
 
     /// Navigation while it's open. Returns true if the key was used.
@@ -195,9 +206,18 @@ enum QuickOpen {
         }
         if control && (key == "n" || key == "j") { controller.move(1); return true }
         if control && (key == "p" || key == "k") { controller.move(-1); return true }
+        if modifiers.contains(.command) { return false }
+        if event.keyCode == 48 { return true }                                      // Tab: the field keeps the keyboard
         // Anything typed goes to the search field, wherever focus had wandered.
-        if !modifiers.contains(.command) { focusField(of: model) }
-        return false
+        if focusField(of: model) { return false }
+        // Typed before the field is on screen (straight after ⌘P): add it to the query here, so it
+        // never lands in the note.
+        if event.keyCode == 51 {                                                    // Delete
+            controller.query = String(controller.query.dropLast())
+        } else if !control, let characters = event.characters, characters.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) {
+            controller.query += characters
+        }
+        return true
     }
 }
 
@@ -206,7 +226,6 @@ enum QuickOpen {
 struct QuickSearch: View {
     static let placeholder = "Open note or folder…"
     @ObservedObject var controller: QuickOpenController
-    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -218,7 +237,6 @@ struct QuickSearch: View {
                     TextField(Self.placeholder, text: $controller.query)
                         .textFieldStyle(.plain)
                         .font(.system(size: 18))
-                        .focused($focused)
                     if AIToolbox.shared.executable(named: "fzf") != nil {
                         Text("fzf").font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundStyle(.tertiary)
                             .help("Ranked by fzf")
@@ -262,9 +280,6 @@ struct QuickSearch: View {
             .glassPanel(cornerRadius: 18)
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
             .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
-        }
-        .onAppear {
-            focused = true
         }
     }
 
