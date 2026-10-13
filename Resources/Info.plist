@@ -8,6 +8,10 @@
 	<string>Sonder</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.frizurd.sonder</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 	<key>CFBundleName</key>
 	<string>Sonder</string>
 	<key>CFBundleDisplayName</key>

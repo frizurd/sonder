@@ -31,6 +31,8 @@ AI_E2E=claude,codex swift test --filter AIEndToEndTests   # real CLI round trip
 PERF=1 swift test -c release --filter PerformanceTests     # timings on a 250k-character note
 ```
 
+The app icon is the Icon Composer bundle `Resources/AppIcon.icon`, compiled by the build script with `actool`. Its letter layer is rendered by `swift scripts/make-icon.swift <out.png> 1024 --layer` (needs the Termina typeface installed).
+
 To check that clicks on the title-bar controls reach them, and where the first line and Focus Mode's caret line sit (an off-screen window; your settings are untouched):
 
 ```sh
