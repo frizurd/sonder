@@ -140,7 +140,7 @@ final class QuickOpenController: ObservableObject {
 /// search field sees them.
 final class QuickOpenPanel: NSPanel {
     private let controller: QuickOpenController
-    private weak var parentModel: WindowModel?
+    fileprivate(set) weak var parentModel: WindowModel?
 
     private init(controller: QuickOpenController, model: WindowModel) {
         self.controller = controller
@@ -181,8 +181,6 @@ final class QuickOpenPanel: NSPanel {
         }
         if control && (key == "n" || key == "j") { controller.move(1); return true }
         if control && (key == "p" || key == "k") { controller.move(-1); return true }
-        // ⌘P while open keeps it open (the shortcut can arrive twice); Esc closes it.
-        if event.modifierFlags.contains(.command) && key == "p" { return true }
         return false
     }
 
@@ -221,42 +219,62 @@ final class QuickOpenPanel: NSPanel {
 
     private static var current: QuickOpenPanel?
 
-    /// Shows Open Quickly over the top of `window`, taking the keyboard.
-    static func show(for model: WindowModel, in window: NSWindow) {
-        if tracing {
-            print("show")
-            for delay in [0.1, 0.6, 1.5] {
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    print("after \(delay)s: key=\(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "nil") responder=\(NSApp.keyWindow?.firstResponder.map { String(describing: type(of: $0)) } ?? "nil") active=\(NSApp.isActive)")
-                    fflush(stdout)
-                }
-            }
+    /// Shows Open Quickly for `model`'s window (the front window if nil), taking the keyboard.
+    /// Calling it while it's open just puts the cursor back in the search field. Returns false if
+    /// there is no window to show it on.
+    @discardableResult
+    static func present(for model: WindowModel? = nil) -> Bool {
+        guard let model = model ?? WindowRegistry.shared.activeModel else { return false }
+        if let current, current.isVisible, current.parentModel === model {
+            current.focusField()
+            return true
         }
+        let window = WindowRegistry.shared.window(for: model)
+            ?? NSApp.mainWindow.flatMap { $0 is NSPanel ? nil : $0 }
+            ?? NSApp.windows.first { $0.isVisible && !($0 is NSPanel) && $0.canBecomeMain }
+        guard let window else { return false }
+        if tracing { print("present"); fflush(stdout) }
         current?.dismiss(restoreFocus: false)
         let controller = QuickOpenController(model: model)
         let panel = QuickOpenPanel(controller: controller, model: model)
         controller.close = { [weak panel] in panel?.dismiss(restoreFocus: false) }
         let frame = window.frame
-        let origin = NSPoint(x: frame.midX - panel.frame.width / 2, y: frame.maxY - 90 - panel.frame.height)
-        panel.setFrameOrigin(origin)
+        panel.setFrameOrigin(NSPoint(x: frame.midX - panel.frame.width / 2, y: frame.maxY - 90 - panel.frame.height))
         window.addChildWindow(panel, ordered: .above)
+        current = panel
         panel.makeKeyAndOrderFront(nil)
         panel.watchOutsideClicks()
         panel.resignObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak panel] _ in
             panel?.dismiss(restoreFocus: false)
         }
-        current = panel
-        // A menu shortcut is still being handled; take the keyboard once it has finished.
+        if !model.showQuickSearch { model.showQuickSearch = true }
+        // If a menu or key event is still being handled, take the keyboard again once it has finished.
         DispatchQueue.main.async { [weak panel] in
             guard let panel, panel.isVisible else { return }
             NSApp.activate()
             panel.makeKeyAndOrderFront(nil)
+            panel.focusField()
         }
+        return true
     }
 
-    static func hide() {
-        current?.dismiss()
+    static func hide(for model: WindowModel? = nil) {
+        guard let current, model == nil || current.parentModel === model else { return }
+        current.dismiss()
+    }
+
+    /// Puts the keyboard in the search field.
+    func focusField() {
+        makeKeyAndOrderFront(nil)
+        func field(in view: NSView) -> NSTextField? {
+            if let field = view as? NSTextField, field.isEditable { return field }
+            for subview in view.subviews { if let found = field(in: subview) { return found } }
+            return nil
+        }
+        if let contentView, let field = field(in: contentView), !(firstResponder is NSText) {
+            makeFirstResponder(field)
+        }
     }
 }
 

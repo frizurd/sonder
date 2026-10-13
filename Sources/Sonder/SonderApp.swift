@@ -40,8 +40,26 @@ extension Main {
     }
 }
 
+/// Shortcuts that must work no matter what has focus.
+enum KeyCommands {
+    private static var monitor: Any?
+
+    /// ⌘P opens Open Quickly from anywhere in the app: caught before menus, text views or panels see
+    /// it, so focus, SwiftUI state or a duplicate key event can't get in the way.
+    static func install() {
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.capsLock, .numericPad, .function])
+            guard modifiers == .command, event.charactersIgnoringModifiers?.lowercased() == "p" else { return event }
+            if !QuickOpenPanel.present() { NSSound.beep() }
+            return nil
+        }
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        KeyCommands.install()
         Preferences.shared.applyAppearance()
         _ = AIToolbox.shared
         // Development aid: `--debug-menus` prints every menu item with a shortcut, and whether it's enabled.
@@ -121,12 +139,9 @@ struct AppCommands: Commands {
             Divider()
             Button("Open…") { model?.openWithPanel() }
                 .keyboardShortcut("o")
-            Button("Open Quickly…") {
-                if QuickOpenPanel.tracing { print("menu ⌘P model=\(model != nil) flag=\(model?.showQuickSearch as Any)"); fflush(stdout) }
-                model?.showQuickSearch = true
-            }
+            Button("Open Quickly…") { QuickOpenPanel.present(for: model) }
                 .keyboardShortcut("p")
-            Button("Search Notes…") { model?.showQuickSearch = true }
+            Button("Search Notes…") { QuickOpenPanel.present(for: model) }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
         }
         CommandGroup(replacing: .saveItem) {

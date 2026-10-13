@@ -91,6 +91,7 @@ enum Snapshot {
     /// title bar doesn't swallow clicks meant for the header buttons: `Sonder --hit-test <file.md>`.
     static func hitTest(input: String) {
         let app = NSApplication.shared
+        KeyCommands.install()
         app.setActivationPolicy(.accessory)
         let url = URL(fileURLWithPath: input).standardizedFileURL
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1240, height: 780),
@@ -256,6 +257,38 @@ enum Snapshot {
             type("\r")
             pump(0.6)
             print("palette folder: list=\(model.selection) closed=\(!model.showQuickSearch)")
+        }
+        // ⌘P through the real event path (NSApp.sendEvent, so the app's key monitor runs).
+        if let model = WindowRegistry.shared.activeModel {
+            func send(_ chars: String, keyCode: UInt16, command: Bool) {
+                let target = NSApp.windows.first { $0 is QuickOpenPanel && $0.isVisible } ?? window
+                for type in [NSEvent.EventType.keyDown, .keyUp] {
+                    let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: command ? [.command] : [],
+                                                 timestamp: 0, windowNumber: target.windowNumber, context: nil,
+                                                 characters: chars, charactersIgnoringModifiers: chars, isARepeat: false, keyCode: keyCode)!
+                    NSApp.sendEvent(event)
+                }
+                pump(0.3)
+            }
+            let visible = { NSApp.windows.contains { $0 is QuickOpenPanel && $0.isVisible } }
+            send("p", keyCode: 35, command: true)
+            print("⌘P opens: \(visible())")
+            send("p", keyCode: 35, command: true)
+            print("⌘P again keeps it open: \(visible())")
+            send("\u{1b}", keyCode: 53, command: false)
+            print("Esc closes: \(!visible()) flag reset: \(!model.showQuickSearch)")
+            send("p", keyCode: 35, command: true)
+            print("⌘P after closing opens again: \(visible())")
+            // A panel that vanished without closing properly leaves the flag on; ⌘P must still work.
+            NSApp.windows.first { $0 is QuickOpenPanel }?.orderOut(nil)
+            pump(0.2)
+            send("p", keyCode: 35, command: true)
+            print("⌘P after the panel vanished (flag stuck \(model.showQuickSearch)): \(visible())")
+            send("\u{1b}", keyCode: 53, command: false)
+            window.makeFirstResponder(nil)
+            send("p", keyCode: 35, command: true)
+            print("⌘P with nothing focused: \(visible())")
+            send("\u{1b}", keyCode: 53, command: false)
         }
         let close = window.standardWindowButton(.closeButton)!
         let center = close.convert(NSPoint(x: close.bounds.midX, y: close.bounds.midY), to: frameView)

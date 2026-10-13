@@ -46,7 +46,19 @@ final class WindowModel: ObservableObject {
     @Published var showSidebar: Bool { didSet { Preferences.store.set(showSidebar, forKey: "window.showSidebar") } }
     @Published var showPreview: Bool { didSet { Preferences.store.set(showPreview, forKey: "window.showPreview"); refreshPreview() } }
     @Published var showAI: Bool { didSet { Preferences.store.set(showAI, forKey: "window.showAI") } }
-    @Published var showQuickSearch = false
+    /// Open Quickly. Setting it shows or hides the panel directly, every time (even when the value
+    /// doesn't change), so it can never get stuck "open" without a panel on screen.
+    @Published var showQuickSearch = false {
+        didSet {
+            if showQuickSearch {
+                if !QuickOpenPanel.present(for: self) {
+                    DispatchQueue.main.async { self.showQuickSearch = false }
+                }
+            } else {
+                QuickOpenPanel.hide(for: self)
+            }
+        }
+    }
     @Published private(set) var fileURL: URL?
     /// The text the Preview shows. Kept apart from the window's state so a pause in typing only
     /// redraws the Preview, not the Library and headers.

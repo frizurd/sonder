@@ -66,13 +66,6 @@ struct ContentView: View {
             WindowRegistry.shared.register(model)
             WindowRegistry.shared.openWindow = { url in openWindow(value: url) }
         }
-        .onChange(of: model.showQuickSearch) { _, show in
-            if show, let window = WindowRegistry.shared.window(for: model) {
-                QuickOpenPanel.show(for: model, in: window)
-            } else if !show {
-                QuickOpenPanel.hide()
-            }
-        }
         .onDisappear { model.finishEditing() }
     }
 }
@@ -165,8 +158,13 @@ final class WindowRegistry {
     }
 
     var activeModel: WindowModel? {
-        let key = NSApp.keyWindow ?? NSApp.mainWindow
-        return entries.first { $0.window === key && $0.model != nil }?.model ?? entries.last { $0.model != nil }?.model
+        // A panel (Open Quickly) stands in for the window it belongs to.
+        for candidate in [NSApp.keyWindow, NSApp.keyWindow?.parent, NSApp.mainWindow] {
+            if let candidate, let model = entries.first(where: { $0.window === candidate && $0.model != nil })?.model {
+                return model
+            }
+        }
+        return entries.last { $0.model != nil }?.model
     }
 
     func window(for model: WindowModel) -> NSWindow? {
