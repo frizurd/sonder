@@ -61,6 +61,7 @@ enum KeyCommands {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         KeyCommands.install()
+        Updates.shared.start()
         Preferences.shared.applyAppearance()
         _ = AIToolbox.shared
         // Development aid: `--debug-scroll-list` scrolls the notes list a little, to show its top edge.
@@ -136,6 +137,10 @@ struct AppCommands: Commands {
     private var window: NSWindow? { model.flatMap { WindowRegistry.shared.window(for: $0) } }
 
     var body: some Commands {
+        CommandGroup(after: .appInfo) {
+            Button("Check for Updates…") { Updates.shared.checkForUpdates() }
+        }
+
         // MARK: File
         CommandGroup(replacing: .newItem) {
             Button("New File") { model?.newDocument() }

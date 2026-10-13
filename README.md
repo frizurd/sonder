@@ -33,11 +33,17 @@ The default Library location is `~/Documents/Sonder`. Add more locations in the 
 
 ```sh
 scripts/build-app.sh          # → build/Sonder.app
-scripts/build-dmg.sh          # → build/Sonder.dmg, universal (see the script for signing and notarizing)
+scripts/build-dmg.sh          # → build/Sonder.dmg and build/appcast.xml (see the script for signing and notarizing)
 open build/Sonder.app
 swift test
 AI_E2E=claude,codex swift test --filter AIEndToEndTests   # real CLI round trip
 PERF=1 swift test -c release --filter PerformanceTests     # timings on a 250k-character note
+```
+
+Updates come through [Sparkle](https://sparkle-project.org): the app reads `appcast.xml` from the newest GitHub release once a day and offers new versions (Sonder › Check for Updates… checks now). To release, raise `CFBundleShortVersionString` and `CFBundleVersion` in `Resources/Info.plist`, run `scripts/build-dmg.sh` with `DEVELOPER_ID` and `NOTARY_PROFILE` set, then upload both files:
+
+```sh
+gh release create v0.1.1 build/Sonder.dmg build/appcast.xml --title "Sonder 0.1.1" --notes "..."
 ```
 
 The app icon is the Icon Composer bundle `Resources/AppIcon.icon`, compiled by the build script with `actool`. Its artwork is Rodin's The Thinker, lifted from The Metropolitan Museum of Art's public-domain photo of the 1904 plaster cast ([object 209021](https://www.metmuseum.org/art/collection/search/209021)). The layer is rendered by `swift scripts/make-icon.swift <photo.jpg> <out.png> 1024 --layer`.
