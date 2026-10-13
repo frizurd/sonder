@@ -65,7 +65,7 @@ private struct EditorSettings: View {
                 Toggle("Smart dashes", isOn: $prefs.smartDashes)
                 Toggle("Check spelling while typing", isOn: $prefs.spellCheck)
             }
-            Text("iA Writer Mono, Duo and Quattro are used when installed; otherwise IBM Plex.")
+            Text("Set in IBM Plex, unless matching Mono, Duo or Quattro fonts are installed.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

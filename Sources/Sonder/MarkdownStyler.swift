@@ -87,7 +87,7 @@ struct EditorStyle: Equatable {
     }
 }
 
-/// Styles the editor the way iA Writer does: all markdown syntax stays visible in a light gray,
+/// Styles the editor: all markdown syntax stays visible in a light gray,
 /// headings are body-sized and bold with their `#` hanging in the left margin, and emphasis
 /// is shown with real bold and italic faces. Characters are never changed.
 final class MarkdownStyler {

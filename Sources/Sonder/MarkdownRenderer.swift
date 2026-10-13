@@ -4,7 +4,7 @@ import cmark_gfm_extensions
 
 /// Turns a document into HTML with cmark-gfm (CommonMark + GitHub Flavored Markdown).
 ///
-/// Before parsing, a few Writer conventions are rewritten into standard markdown or HTML:
+/// Before parsing, a few conventions beyond CommonMark are rewritten into standard markdown or HTML:
 /// content blocks (a file reference on its own line), `[[wikilinks]]`, `==highlights==`,
 /// `#hashtags`, and `$math$`, which is shielded from the parser so KaTeX can render it.
 struct MarkdownRenderer {
@@ -113,7 +113,7 @@ struct MarkdownRenderer {
     private static let highlight = try! NSRegularExpression(pattern: #"==(?=\S)(.+?)(?<=\S)=="#)
     private static let hashtag = try! NSRegularExpression(pattern: #"(?<![\w#&/(\[])#([\p{L}\p{N}_\-]*\p{L}[\p{L}\p{N}_\-]*)"#)
 
-    /// Rewrites inline Writer syntax outside of code spans.
+    /// Rewrites the inline extensions outside of code spans.
     private func inline(_ line: String, math: inout [String]) -> String {
         let ns = line as NSString
         var result = ""

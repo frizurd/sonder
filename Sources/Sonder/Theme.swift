@@ -54,7 +54,7 @@ enum Theme {
 
     // MARK: Fonts
 
-    /// Plex fonts ship with the app; iA's own fonts are used instead when the user has installed them.
+    /// Plex fonts ship with the app; matching Mono, Duo and Quattro fonts are preferred when installed.
     static func registerBundledFonts() {
         guard let directory = resourceURL("Fonts"),
               let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
