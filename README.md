@@ -6,6 +6,8 @@
 
 A native macOS writing app (SwiftUI + TextKit): plain text, visible markdown syntax, and a Library of files on disk.
 
+**[Download Sonder for Mac](https://github.com/frizurd/sonder/releases/latest/download/Sonder.dmg)** (macOS 14 or later, Apple silicon and Intel). Open the DMG and drag Sonder to Applications.
+
 Website: [frizky.dev/products/sonder](https://frizky.dev/products/sonder)
 
 ![Sonder with the Library, the notes list and a note open in the editor](docs/screenshot.png)
@@ -31,6 +33,7 @@ The default Library location is `~/Documents/Sonder`. Add more locations in the 
 
 ```sh
 scripts/build-app.sh          # → build/Sonder.app
+scripts/build-dmg.sh          # → build/Sonder.dmg, universal (see the script for signing and notarizing)
 open build/Sonder.app
 swift test
 AI_E2E=claude,codex swift test --filter AIEndToEndTests   # real CLI round trip
