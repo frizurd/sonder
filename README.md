@@ -59,3 +59,7 @@ To render the main window to PNGs (light and dark; with the Library, in Focus Mo
 ```sh
 SONDER_DEFAULTS_SUITE=snapshot SONDER_LIBRARY=/tmp/lib swift run Sonder --snapshot Resources/Welcome.md /tmp/snapshots
 ```
+
+## License
+
+Sonder is released under the [MIT License](LICENSE). It bundles IBM Plex (SIL Open Font License, see `Resources/Fonts/LICENSE.txt`) and uses [swift-cmark](https://github.com/swiftlang/swift-cmark) (BSD 2-Clause) and [Sparkle](https://sparkle-project.org) (MIT).

@@ -26,6 +26,8 @@ cp "$BIN_DIR/Sonder" "$APP/Contents/MacOS/Sonder"
 # The build adds rpaths into this machine's build folder and Xcode; they don't belong in the app.
 mkdir -p "$APP/Contents/Frameworks"
 ditto "$BIN_DIR/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
+# Our English wording for a few of Sparkle's sentences (the framework is signed again below).
+ditto Resources/Sparkle "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/Resources"
 otool -l "$APP/Contents/MacOS/Sonder" | awk '/LC_RPATH/ { getline; getline; print $2 }' | grep -E '^/(Users|Applications)/' | sort -u \
     | while read -r path; do install_name_tool -delete_rpath "$path" "$APP/Contents/MacOS/Sonder"; done
 cp Resources/Info.plist "$APP/Contents/Info.plist"

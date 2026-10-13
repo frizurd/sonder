@@ -1,0 +1,5 @@
+/* Sparkle's English text, built into the framework, joins these with an em dash. scripts/build-app.sh
+   copies this file into Sparkle.framework, where it takes precedence for English. */
+"%@ %@ is now available—you have %@. This is an important update; would you like to download it now?" = "%1$@ %2$@ is now available. You have %3$@. This is an important update; would you like to download it now?";
+"%@ %@ is now available—you have %@. Would you like to download it now?" = "%1$@ %2$@ is now available. You have %3$@. Would you like to download it now?";
+"%@ %@ is now available—you have %@. Would you like to learn more about this update on the web?" = "%1$@ %2$@ is now available. You have %3$@. Would you like to learn more about this update on the web?";
