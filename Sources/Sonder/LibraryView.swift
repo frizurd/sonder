@@ -54,6 +54,7 @@ struct Organizer: View {
                     Spacer()
                     Button(action: addLocation) { Image(systemName: "plus") }
                         .buttonStyle(.borderless)
+                        .padding(.trailing, 10)
                         .help("Add Location…")
                 }
             }
@@ -89,9 +90,9 @@ struct Organizer: View {
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
         // The window buttons sit in the panel's top strip, as in a macOS 26 sidebar.
-        .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: Chrome.barHeight - 8) }
-        .glassPanel(cornerRadius: 18)
-        .padding(8)
+        // A flat column; the window buttons sit in its top strip.
+        .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: Chrome.barHeight) }
+        .background(Color.sidebarBackground)
     }
 
     private func favoriteRow(_ url: URL, index: Int) -> some View {
@@ -373,6 +374,11 @@ struct FileListHeader: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            // With the sidebar hidden, this header starts under the window buttons.
+            if !model.showSidebar { Spacer().frame(width: Chrome.windowButtonsWidth - 14) }
+            GlassIconButton(symbol: "sidebar.squares.left", help: "Show or hide the sidebar (⌥⌘S)") {
+                model.showSidebar.toggle()
+            }
             if let parent = parentFolder {
                 GlassIconButton(symbol: "chevron.left", help: "Go to \(parent.lastPathComponent)") {
                     model.selection = .folder(parent)
@@ -382,10 +388,14 @@ struct FileListHeader: View {
                 Text(title)
                     .font(.system(size: 15, weight: .bold))
                     .lineLimit(1)
+                    .truncationMode(.tail)
                 Text(noteCount == 1 ? "1 note" : "\(noteCount) notes")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
             }
+            .layoutPriority(1)
             Spacer(minLength: 8)
             GlassButtonGroup {
                 Menu {

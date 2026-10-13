@@ -230,7 +230,14 @@ struct AppCommands: Commands {
         }
 
         // MARK: View
+        // SwiftUI's own Toggle Sidebar (⌥⌘S) is replaced by Show/Hide Sidebar below.
+        CommandGroup(replacing: .sidebar) {}
         CommandGroup(before: .toolbar) {
+            Button(model?.showSidebar == true ? "Hide Sidebar" : "Show Sidebar") {
+                model?.showSidebar.toggle()
+                if model?.showSidebar == true { model?.showLibrary = true }
+            }
+            .keyboardShortcut("s", modifiers: [.command, .option])
             Button(model?.showLibrary == true ? "Hide Library" : "Show Library") { model?.showLibrary.toggle() }
                 .keyboardShortcut("s", modifiers: [.command, .control])
             Button(model?.showPreview == true ? "Hide Preview" : "Show Preview") { model?.showPreview.toggle() }

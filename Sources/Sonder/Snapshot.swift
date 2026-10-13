@@ -134,10 +134,10 @@ enum Snapshot {
                 pump(0.3)
                 print("file list focused after clicking the editor (⌘D is Focus Mode): \(model.fileListHasFocus)")
             }
-            let probe = NSPoint(x: Chrome.sidebarWidth + Chrome.fileListWidth + 1 + 12 + Chrome.buttonSize / 2, y: height - Chrome.barHeight / 2)
+            let probe = NSPoint(x: Chrome.sidebarWidth + Chrome.fileListWidth + 2 + 12 + Chrome.buttonSize / 2, y: height - Chrome.barHeight / 2)
             print("view under Library button:", frameView.hitTest(probe).map { String(describing: type(of: $0)) } ?? "nil")
             let before = model.showLibrary
-            let x = Chrome.sidebarWidth + Chrome.fileListWidth + 1 + 12 + Chrome.buttonSize / 2
+            let x = Chrome.sidebarWidth + Chrome.fileListWidth + 2 + 12 + Chrome.buttonSize / 2
             click(window, at: NSPoint(x: x, y: height - Chrome.barHeight / 2))
             pump(0.5)
             print("click on Library button toggled it: \(model.showLibrary != before)")

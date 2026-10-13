@@ -11,6 +11,10 @@ enum Chrome {
     static let windowButtonsWidth: CGFloat = 84
     static let sidebarWidth: CGFloat = 220
     static let fileListWidth: CGFloat = 300
+    /// With the sidebar hidden the notes list also sits under the window buttons, so it gets wider.
+    static let fileListWidthAlone: CGFloat = 360
+
+    static func fileListWidth(sidebar: Bool) -> CGFloat { sidebar ? fileListWidth : fileListWidthAlone }
 }
 
 /// One writing window: a floating glass Organizer, the File List, the Editor with optional Preview,
@@ -29,11 +33,14 @@ struct ContentView: View {
     var body: some View {
         HStack(spacing: 0) {
             if model.showLibrary {
-                Organizer(model: model)
-                    .frame(width: Chrome.sidebarWidth)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                if model.showSidebar {
+                    Organizer(model: model)
+                        .frame(width: Chrome.sidebarWidth)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                    Divider().ignoresSafeArea()
+                }
                 FileList(model: model)
-                    .frame(width: Chrome.fileListWidth)
+                    .frame(width: Chrome.fileListWidth(sidebar: model.showSidebar))
                     .transition(.move(edge: .leading).combined(with: .opacity))
                 Divider().ignoresSafeArea()
             }
@@ -47,6 +54,7 @@ struct ContentView: View {
             }
         }
         .animation(.smooth(duration: 0.28), value: model.showLibrary)
+        .animation(.smooth(duration: 0.28), value: model.showSidebar)
         .animation(.smooth(duration: 0.28), value: model.showAI)
         .background(Color.editorBackground)
         .ignoresSafeArea()
@@ -276,8 +284,8 @@ struct WindowHeader: View {
     var body: some View {
         HStack(spacing: 0) {
             if model.showLibrary {
-                Color.clear.frame(width: Chrome.sidebarWidth)
-                FileListHeader(model: model).frame(width: Chrome.fileListWidth)
+                if model.showSidebar { Color.clear.frame(width: Chrome.sidebarWidth + 1) }
+                FileListHeader(model: model).frame(width: Chrome.fileListWidth(sidebar: model.showSidebar))
                 Color.clear.frame(width: 1)
             }
             EditorHeader(model: model).frame(maxWidth: .infinity)
@@ -289,6 +297,7 @@ struct WindowHeader: View {
         .frame(height: Chrome.barHeight)
         .background(WindowDragArea())
         .animation(.smooth(duration: 0.28), value: model.showLibrary)
+        .animation(.smooth(duration: 0.28), value: model.showSidebar)
         .animation(.smooth(duration: 0.28), value: model.showAI)
     }
 }

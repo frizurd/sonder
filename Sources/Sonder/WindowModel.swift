@@ -42,6 +42,8 @@ extension Notification.Name {
 final class WindowModel: ObservableObject {
     @Published var selection: OrganizerItem
     @Published var showLibrary: Bool { didSet { Preferences.store.set(showLibrary, forKey: "window.showLibrary") } }
+    /// The sidebar (locations, favorites, smart folders, hashtags), hidden on its own with ⌥⌘S.
+    @Published var showSidebar: Bool { didSet { Preferences.store.set(showSidebar, forKey: "window.showSidebar") } }
     @Published var showPreview: Bool { didSet { Preferences.store.set(showPreview, forKey: "window.showPreview"); refreshPreview() } }
     @Published var showAI: Bool { didSet { Preferences.store.set(showAI, forKey: "window.showAI") } }
     @Published var showQuickSearch = false
@@ -77,6 +79,7 @@ final class WindowModel: ObservableObject {
     init(url: URL? = nil) {
         let defaults = Preferences.store
         showLibrary = defaults.object(forKey: "window.showLibrary") as? Bool ?? true
+        showSidebar = defaults.object(forKey: "window.showSidebar") as? Bool ?? true
         showPreview = defaults.object(forKey: "window.showPreview") as? Bool ?? false
         showAI = defaults.object(forKey: "window.showAI") as? Bool ?? false
         selection = .folder(Library.shared.locations.first ?? Library.defaultLocation)
