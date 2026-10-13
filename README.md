@@ -1,14 +1,27 @@
-<img src="docs/icon.png" width="128" alt="Sonder app icon">
+<p align="center">
+  <img src="docs/icon.png" width="128" alt="Sonder app icon">
+</p>
 
-# Sonder markdown editor
+<h1 align="center">Sonder markdown editor</h1>
 
-*Sonder* (n.): the realization that each passerby has a life as vivid and complex as your own.
+<p align="center">
+  <em>Sonder</em> (n.): the realization that each passerby has a life as vivid and complex as your own.
+</p>
 
-A native macOS writing app (SwiftUI + TextKit): plain text, visible markdown syntax, and a Library of files on disk.
+<p align="center">
+  A native Mac app for writing in markdown.<br>
+  Your notes stay plain text files in your own folders, with the syntax kept visible.
+</p>
 
-**[Download Sonder for Mac](https://github.com/frizurd/sonder/releases/latest/download/Sonder.dmg)** (macOS 14 or later, Apple silicon and Intel). Open the DMG and drag Sonder to Applications.
+<p align="center">
+  <a href="https://github.com/frizurd/sonder/releases/latest/download/Sonder.dmg"><img src="https://img.shields.io/github/v/release/frizurd/sonder?style=for-the-badge&label=Download%20for%20Mac&logo=apple&logoColor=white&color=111111" alt="Download for Mac"></a>
+  <a href="https://frizky.dev/products/sonder"><img src="https://img.shields.io/badge/Website-frizky.dev-555555?style=for-the-badge" alt="Website"></a>
+</p>
 
-Website: [frizky.dev/products/sonder](https://frizky.dev/products/sonder)
+<p align="center">
+  <sub>Free and open source · macOS 14 or later · Apple silicon and Intel</sub><br>
+  <sub>Open the DMG and drag Sonder to Applications. New versions arrive in the app.</sub>
+</p>
 
 ![Sonder with the Library, the notes list and a note open in the editor](docs/screenshot.png)
 
