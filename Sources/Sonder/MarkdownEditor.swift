@@ -20,6 +20,7 @@ struct MarkdownEditor: NSViewRepresentable {
         scrollView.backgroundColor = Theme.background
         scrollView.documentView = textView
         textView.frame = NSRect(origin: .zero, size: scrollView.contentSize)
+        ScrollPocket.hideTop(of: scrollView)
 
         let coordinator = context.coordinator
         textView.delegate = coordinator

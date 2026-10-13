@@ -19,10 +19,8 @@ struct PreviewWebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: PreviewWebView.configuration())
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
-        if #available(macOS 26.0, *) {
-            // The page scrolls under the header; WebKit keeps its top clear of it.
-            webView.obscuredContentInsets = NSEdgeInsets(top: Chrome.barHeight, left: 0, bottom: 0, right: 0)
-        }
+        // The page runs under the header. Declaring the header as obscured would give the page the
+        // system's hard top edge (a band with a line); the editor area's soft fade covers it instead.
         context.coordinator.webView = webView
         return webView
     }
@@ -115,7 +113,7 @@ struct PreviewWebView: NSViewRepresentable {
 
         /// The page goes through a temporary file so local images can load.
         private func load(_ html: String, base: URL?, in webView: WKWebView) {
-            // Before macOS 26 the page itself leaves room for the header.
+            // On macOS 26 WebKit keeps the page's top clear of the title bar; before that the page does.
             var classes = "preview "
             if #unavailable(macOS 26.0) { classes += "preview-header " }
             var page = html.replacingOccurrences(of: "<body class=\"", with: "<body class=\"" + classes)

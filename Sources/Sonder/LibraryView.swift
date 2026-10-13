@@ -91,7 +91,7 @@ struct Organizer: View {
         .scrollContentBackground(.hidden)
         // A flat column; the window buttons sit in its top strip, over rows that fade as they scroll under.
         // (The sidebar list style draws a hard line with the system soft edge, so it gets the custom fade.)
-        .softTopEdge(height: Chrome.barHeight, color: .sidebarBackground)
+        .softTopEdge(height: Chrome.barHeight, color: .sidebarBackground, showsAtRest: false)
         .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: Chrome.barHeight) }
         .background(Color.sidebarBackground)
     }

@@ -222,13 +222,8 @@ struct EditorArea: View {
         }
         // Both panes run under the header (which lives in the title bar); their own insets keep text clear.
         .ignoresSafeArea()
-        .overlay(alignment: .top) {
-            // A soft edge so text scrolling under the header fades out instead of colliding with it.
-            LinearGradient(colors: [Color.editorBackground, Color.editorBackground.opacity(0.85), Color.editorBackground.opacity(0)],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: Chrome.barHeight + 18)
-                .allowsHitTesting(false)
-        }
+        // Text scrolling up under the header blurs and fades out, as in the other columns.
+        .softTopEdge(height: Chrome.barHeight, color: .editorBackground)
     }
 }
 
@@ -376,10 +371,14 @@ struct EditorColumn: View {
 struct SoftTopEdge: ViewModifier {
     let height: CGFloat
     let color: Color
+    /// Off for a list: the fade only shows once rows have scrolled up under the header, so it never
+    /// veils the top rows at rest.
+    var showsAtRest = true
     private let tail: CGFloat = 28
+    @State private var scrolled = false
 
     func body(content: Content) -> some View {
-        hideSystemEdge(content)
+        trackScroll(hideSystemEdge(content))
             .overlay(alignment: .top) {
                 let total = height + tail
                 let solid = height / total
@@ -396,9 +395,24 @@ struct SoftTopEdge: ViewModifier {
                                              .init(color: .clear, location: 1)],
                                      startPoint: .top, endPoint: .bottom))
                 .frame(height: total)
+                .opacity(showsAtRest || scrolled ? 1 : 0)
+                .animation(.easeOut(duration: 0.15), value: scrolled)
+                // At rest only the plain strip under the header stays, still covering the system's edge.
+                .background(alignment: .top) { color.frame(height: height + 1) }
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
             }
+    }
+
+    @ViewBuilder
+    private func trackScroll(_ content: some View) -> some View {
+        if #available(macOS 15.0, *), !showsAtRest {
+            content.onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 0.5 } action: { _, now in
+                scrolled = now
+            }
+        } else {
+            content
+        }
     }
 
     @ViewBuilder
@@ -667,8 +681,8 @@ extension View {
     /// Rows scrolling up under a column's header blur and fade out smoothly: a blur material and the
     /// column's own color, both fading from the top of the column to `height` plus a soft tail. The
     /// system's hard title-bar edge (with its line) is turned off so only this shows.
-    func softTopEdge(height: CGFloat, color: Color) -> some View {
-        modifier(SoftTopEdge(height: height, color: color))
+    func softTopEdge(height: CGFloat, color: Color, showsAtRest: Bool = true) -> some View {
+        modifier(SoftTopEdge(height: height, color: color, showsAtRest: showsAtRest))
     }
 
     /// A bar pinned over the top of a scrolling list. On macOS 26 the list keeps scrolling under it
