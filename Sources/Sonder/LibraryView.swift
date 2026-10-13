@@ -89,7 +89,7 @@ struct Organizer: View {
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
-        // The window buttons sit in the panel's top strip, as in a macOS 26 sidebar.
+        .softTopEdge(height: Chrome.barHeight, color: .sidebarBackground)
         // A flat column; the window buttons sit in its top strip.
         .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: Chrome.barHeight) }
         .background(Color.sidebarBackground)
@@ -160,6 +160,7 @@ struct FileList: View {
             }
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
+            .softTopEdge(height: Chrome.barHeight + 40, color: .fileListBackground)
             // Delete key on the selected note; ⌘D does the same from the menu.
             .onDeleteCommand { model.trashCurrentNote() }
             .onChange(of: model.fileURL) { _, url in

@@ -373,6 +373,44 @@ struct EditorColumn: View {
     }
 }
 
+struct SoftTopEdge: ViewModifier {
+    let height: CGFloat
+    let color: Color
+    private let tail: CGFloat = 28
+
+    func body(content: Content) -> some View {
+        hideSystemEdge(content)
+            .overlay(alignment: .top) {
+                let total = height + tail
+                let solid = height / total
+                // Solid under the header (covering the system's own title-bar edge), then blur that fades out.
+                ZStack {
+                    Rectangle().fill(.ultraThinMaterial)
+                    LinearGradient(stops: [.init(color: color, location: 0), .init(color: color, location: solid),
+                                           .init(color: color.opacity(0.4), location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                }
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0),
+                                             .init(color: .black, location: solid),
+                                             .init(color: .black.opacity(0.6), location: solid + (1 - solid) * 0.4),
+                                             .init(color: .clear, location: 1)],
+                                     startPoint: .top, endPoint: .bottom))
+                .frame(height: total)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            }
+    }
+
+    @ViewBuilder
+    private func hideSystemEdge(_ content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content.scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            content
+        }
+    }
+}
+
 /// The dimmed layer behind Open Quickly.
 struct QuickOpenScrim: View {
     let dismiss: () -> Void
@@ -624,6 +662,13 @@ extension View {
         } else {
             background(.regularMaterial, in: Capsule())
         }
+    }
+
+    /// Rows scrolling up under a column's header blur and fade out smoothly: a blur material and the
+    /// column's own color, both fading from the top of the column to `height` plus a soft tail. The
+    /// system's hard title-bar edge (with its line) is turned off so only this shows.
+    func softTopEdge(height: CGFloat, color: Color) -> some View {
+        modifier(SoftTopEdge(height: height, color: color))
     }
 
     @ViewBuilder

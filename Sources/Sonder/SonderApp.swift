@@ -63,6 +63,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         KeyCommands.install()
         Preferences.shared.applyAppearance()
         _ = AIToolbox.shared
+        // Development aid: `--debug-scroll-list` scrolls the notes list a little, to show its top edge.
+        if CommandLine.arguments.contains("--debug-scroll-list") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                guard let window = NSApp.windows.first(where: { $0.contentView != nil && $0.canBecomeMain }) else { return }
+                func scrollViews(in view: NSView) -> [NSScrollView] {
+                    (view as? NSScrollView).map { [$0] } ?? [] + view.subviews.flatMap(scrollViews)
+                }
+                for scrollView in scrollViews(in: window.contentView!) {
+                    let frame = scrollView.convert(scrollView.bounds, to: nil)
+                    if frame.midX < 600, frame.height > 300 {
+                        scrollView.contentView.scroll(to: NSPoint(x: 0, y: scrollView.contentView.bounds.origin.y + 160))
+                        scrollView.reflectScrolledClipView(scrollView.contentView)
+                    }
+                }
+            }
+        }
         // Development aid: `--debug-menus` prints every menu item with a shortcut, and whether it's enabled.
         if CommandLine.arguments.contains("--debug-menus") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
