@@ -6,6 +6,8 @@
 
 A native macOS writing app (SwiftUI + TextKit): plain text, visible markdown syntax, and a Library of files on disk.
 
+Website: [frizky.dev/products/sonder](https://frizky.dev/products/sonder)
+
 ![Sonder with the Library, the notes list and a note open in the editor](docs/screenshot.png)
 
 ## Features
